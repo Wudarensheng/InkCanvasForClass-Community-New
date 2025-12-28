@@ -1,0 +1,112 @@
+{
+  "projectName": "community",
+  "projectOwner": "InkCanvasForClass",
+  "files": [
+    "README.md"
+  ],
+  "commitType": "docs",
+  "commitConvention": "angular",
+  "contributorsPerLine": 7,
+  "contributors": [
+    {
+      "login": "CJKmkp",
+      "name": "CJK_mkp",
+      "avatar_url": "https://avatars.githubusercontent.com/u/113243675?v=4",
+      "profile": "https://github.com/CJKmkp",
+      "contributions": [
+        "maintenance",
+        "doc",
+        "code"
+      ]
+    },
+    {
+      "login": "CreeperAWA",
+      "name": "CreeperAWA",
+      "avatar_url": "https://avatars.githubusercontent.com/u/134939494?v=4",
+      "profile": "https://github.com/CreeperAWA",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "2-2-3-trimethylpentane",
+      "name": "2,2,3-三甲基戊烷",
+      "avatar_url": "https://avatars.githubusercontent.com/u/141403762?v=4",
+      "profile": "https://github.com/2-2-3-trimethylpentane",
+      "contributions": [
+        "blog",
+        "doc",
+        "design"
+      ]
+    },
+    {
+      "login": "Alan-CRL",
+      "name": "Alan-CRL",
+      "avatar_url": "https://avatars.githubusercontent.com/u/92425617?v=4",
+      "profile": "https://github.com/Alan-CRL",
+      "contributions": [
+        "code",
+        "infra",
+        "doc",
+        "financial"
+      ]
+    },
+    {
+      "login": "MKStoler1024",
+      "name": "MKStoler1024",
+      "avatar_url": "https://avatars.githubusercontent.com/u/158786854?v=4",
+      "profile": "https://github.com/MKStoler1024",
+      "contributions": [
+        "doc",
+        "code",
+        "design"
+      ]
+    },
+    {
+      "login": "awesome-iwb",
+      "name": "Awesome Iwb",
+      "avatar_url": "https://avatars.githubusercontent.com/u/184760810?v=4",
+      "profile": "https://github.com/awesome-iwb",
+      "contributions": [
+        "doc"
+      ]
+    },
+    {
+      "login": "PrefacedCorg",
+      "name": "PrefacedCorg",
+      "avatar_url": "https://avatars.githubusercontent.com/u/129855423?v=4",
+      "profile": "https://github.com/PrefacedCorg",
+      "contributions": [
+        "code",
+        "design"
+      ]
+    },
+    {
+      "login": "Jursin",
+      "name": "Jursin",
+      "avatar_url": "https://avatars.githubusercontent.com/u/127487914?v=4",
+      "profile": "http://blog.jursin.top",
+      "contributions": [
+        "design"
+      ]
+    },
+    {
+      "login": "Tayasui-rainnya",
+      "name": "tayasui rainnya!",
+      "avatar_url": "https://avatars.githubusercontent.com/u/156585442?v=4",
+      "profile": "https://github.com/Tayasui-rainnya",
+      "contributions": [
+        "design"
+      ]
+    },
+    {
+      "login": "doudou0720",
+      "name": "doudou0720",
+      "avatar_url": "https://avatars.githubusercontent.com/u/98651603?v=4",
+      "profile": "https://github.com/doudou0720",
+      "contributions": [
+        "code"
+      ]
+    }
+  ]
+}

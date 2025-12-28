@@ -1,0 +1,133 @@
+name: Build and Release ZIP
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Tag to use for release (optional). If provided, release will use it.'
+        required: false
+        default: ''
+
+jobs:
+  build-and-release-zip:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup NuGet
+        uses: NuGet/setup-nuget@v1
+
+      - name: Restore NuGet packages
+        run: nuget restore "Ink Canvas.sln"
+
+      - name: Build solution (Release)
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          if (-not (Test-Path $vswhere)) {
+            Write-Host "vswhere not found at $vswhere"
+            exit 1
+          }
+          $msbuildPath = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -find MSBuild\**\Bin\MSBuild.exe | Select-Object -First 1
+          if (-not $msbuildPath) {
+            Write-Host "MSBuild.exe not found via vswhere"
+            exit 1
+          }
+          Write-Host "Using MSBuild: $msbuildPath"
+          & $msbuildPath "Ink Canvas.sln" /p:Configuration=Release /m
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Package Release output to ZIP
+        shell: pwsh
+        run: |
+          $workspace = "${{ github.workspace }}"
+          $projOut = Join-Path $workspace 'Ink Canvas\bin\Release'
+          if (-not (Test-Path $projOut)) {
+            Write-Host "Release output not found at $projOut"
+            exit 1
+          }
+          New-Item -Path artifact -ItemType Directory -Force | Out-Null
+          $zip = Join-Path $workspace 'artifact\InkCanvasForClass.zip'
+          if (Test-Path $zip) { Remove-Item $zip -Force }
+          Compress-Archive -Path (Join-Path $projOut '*') -DestinationPath $zip -Force
+          Write-Host "Created ZIP: $zip"
+
+      - name: Set release tag
+        id: set_release_tag
+        shell: pwsh
+        run: |
+          $tag = "${{ github.event_name == 'workflow_dispatch' && github.event.inputs.release_tag != '' && github.event.inputs.release_tag || github.ref_name || format('build-{0}', github.run_id) }}"
+          Add-Content -Path $env:GITHUB_ENV -Value "RELEASE_TAG=$tag"
+
+      - name: Check if release already exists
+        id: check_release
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $ownerRepo = '${{ github.repository }}'
+          $tag = '${{ env.RELEASE_TAG }}'
+          $headers = @{ Authorization = "token $env:GITHUB_TOKEN"; Accept = "application/vnd.github+json" }
+          $api = "https://api.github.com/repos/$ownerRepo/releases/tags/$tag"
+          try {
+            $resp = Invoke-RestMethod -Headers $headers -Uri $api -Method Get
+            Add-Content -Path $env:GITHUB_ENV -Value "RELEASE_EXISTS=true"
+            Add-Content -Path $env:GITHUB_ENV -Value ("RELEASE_UPLOAD_URL=$($resp.upload_url)")
+          } catch {
+            Add-Content -Path $env:GITHUB_ENV -Value "RELEASE_EXISTS=false"
+          }
+
+      - name: Create Release (may already exist)
+        id: create_release
+        uses: actions/create-release@v1
+        if: env.RELEASE_EXISTS != 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          release_name: ${{ env.RELEASE_TAG }}
+          draft: false
+          prerelease: false
+
+
+      - name: Resolve release upload_url
+        id: get_release_upload_url
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $uploadUrl = '${{ steps.create_release.outputs.upload_url }}'
+          if (-not $uploadUrl -and $env:RELEASE_UPLOAD_URL) {
+            $uploadUrl = $env:RELEASE_UPLOAD_URL
+          }
+          if (-not $uploadUrl) {
+            $ownerRepo = '${{ github.repository }}'
+            $tag = $env:RELEASE_TAG
+            $headers = @{ Authorization = "token $env:GITHUB_TOKEN"; Accept = "application/vnd.github+json" }
+            $api = "https://api.github.com/repos/$ownerRepo/releases/tags/$tag"
+            try {
+              $resp = Invoke-RestMethod -Headers $headers -Uri $api -Method Get
+              $uploadUrl = $resp.upload_url
+            } catch {
+              Write-Host "Failed to get release by tag: $_"
+              exit 1
+            }
+          }
+            # Keep the upload_url template (e.g. {...}?name,label) so upload action can append the asset name
+          Add-Content -Path $env:GITHUB_OUTPUT -Value ("upload_url=$uploadUrl")
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.get_release_upload_url.outputs.upload_url }}
+          asset_path: artifact/InkCanvasForClass.zip
+          asset_name: InkCanvasForClass.zip
+          asset_content_type: application/zip
