@@ -566,6 +566,21 @@ namespace Ink_Canvas
             {
                 inkCanvas.EditingMode = InkCanvasEditingMode.Ink;
             }
+
+            // 多指触控模式下，用手指进行书写：创建预览笔迹（与手写笔行为一致）
+            try
+            {
+                if (isInMultiTouchMode && drawingShapeMode == 0 &&
+                    (inkCanvas.EditingMode == InkCanvasEditingMode.Ink || lastInkCanvasEditingMode == InkCanvasEditingMode.Ink))
+                {
+                    var sv = GetStrokeVisual(e.TouchDevice.Id);
+                    var p = e.GetTouchPoint(inkCanvas).Position;
+                    double pressure = Settings.TouchMultiplier; // 使用设置中的触摸压力比例
+                    sv.Add(new StylusPoint(p.X, p.Y, pressure));
+                    sv.Redraw();
+                }
+            }
+            catch { }
         }
 
         public double GetTouchBoundWidth(TouchEventArgs e)
@@ -614,6 +629,24 @@ namespace Ink_Canvas
             inkCanvas.ReleaseAllTouchCaptures();
             ViewboxFloatingBar.IsHitTestVisible = true;
             BlackboardUIGridForInkReplay.IsHitTestVisible = true;
+
+            // 提交并清理手指绘制的预览笔迹（多指书写模式）
+            try
+            {
+                if (StrokeVisualList.TryGetValue(e.TouchDevice.Id, out var strokeVisual))
+                {
+                    if (strokeVisual?.Stroke != null)
+                    {
+                        inkCanvas.Strokes.Add(strokeVisual.Stroke);
+                    }
+                    var vc = GetVisualCanvas(e.TouchDevice.Id);
+                    if (vc != null && inkCanvas.Children.Contains(vc)) inkCanvas.Children.Remove(vc);
+                    StrokeVisualList.Remove(e.TouchDevice.Id);
+                    VisualCanvasList.Remove(e.TouchDevice.Id);
+                    TouchDownPointsList.Remove(e.TouchDevice.Id);
+                }
+            }
+            catch { }
 
             //手势完成后切回之前的状态
             if (dec.Count > 1)

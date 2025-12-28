@@ -523,6 +523,22 @@ namespace Ink_Canvas
                     inkCanvas.EditingMode = InkCanvasEditingMode.None;
             }
 
+            // 多指书写：当处于多指触控书写模式并且非形状绘制时，使用手指绘制独立笔迹
+            try
+            {
+                if (drawingShapeMode == 0 && isInMultiTouchMode &&
+                    (inkCanvas.EditingMode == InkCanvasEditingMode.Ink || lastInkCanvasEditingMode == InkCanvasEditingMode.Ink))
+                {
+                    var sv = GetStrokeVisual(e.TouchDevice.Id);
+                    var pos = e.GetTouchPoint(inkCanvas).Position;
+                    double pressure = Settings.TouchMultiplier;
+                    sv.Add(new StylusPoint(pos.X, pos.Y, pressure));
+                    sv.Redraw();
+                    return;
+                }
+            }
+            catch { }
+
             MouseTouchMove(e.GetTouchPoint(inkCanvas).Position);
         }
 
