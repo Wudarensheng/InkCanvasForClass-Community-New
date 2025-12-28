@@ -575,8 +575,8 @@ namespace Ink_Canvas
                 {
                     var sv = GetStrokeVisual(e.TouchDevice.Id);
                     var p = e.GetTouchPoint(inkCanvas).Position;
-                    double pressure = Settings.TouchMultiplier; // 使用设置中的触摸压力比例
-                    sv.Add(new StylusPoint(p.X, p.Y, pressure));
+                    double pressure = Settings.Advanced.TouchMultiplier; // 使用设置中的触摸压力比例
+                    sv.Add(new StylusPoint(p.X, p.Y, (float)pressure));
                     sv.Redraw();
                 }
             }
