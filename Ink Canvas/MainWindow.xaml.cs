@@ -1,3 +1,4 @@
+using Ink_Canvas.Controls;
 using Ink_Canvas.Helpers;
 using Ink_Canvas.Helpers.Plugins;
 using Ink_Canvas.Windows;
@@ -61,6 +62,9 @@ namespace Ink_Canvas
 
         // 悬浮窗拦截管理器
         private FloatingWindowInterceptorManager _floatingWindowInterceptorManager;
+
+        // 多指触控管理器
+        private MultiTouchManager _multiTouchManager;
 
 
         // 设置面板相关状态
@@ -186,6 +190,12 @@ namespace Ink_Canvas
 
             // 初始化墨迹渐隐管理器
             _inkFadeManager = new InkFadeManager(this);
+
+            // 初始化多指触控管理器
+            _multiTouchManager = new MultiTouchManager();
+            _multiTouchManager.MultiTouchStarted += OnMultiTouchStarted;
+            _multiTouchManager.MultiTouchDelta += OnMultiTouchDelta;
+            _multiTouchManager.MultiTouchCompleted += OnMultiTouchCompleted;
 
             // 注册输入事件
             inkCanvas.PreviewMouseDown += inkCanvas_PreviewMouseDown;
@@ -2555,6 +2565,30 @@ namespace Ink_Canvas
         }
 
         /// <summary>
+        /// 多指触控模式开关切换事件处理
+        /// </summary>
+        private void ToggleSwitchEnableMultiTouchMode_Toggled(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (!isLoaded) return;
+                
+                var toggle = sender as ToggleSwitch;
+                bool isEnabled = toggle != null && toggle.IsOn;
+                
+                // 更新多指触控管理器状态
+                _multiTouchManager.IsMultiTouchEnabled = isEnabled;
+                
+                // 记录日志
+                LogHelper.WriteLogToFile($"多指触控模式已{(isEnabled ? \"启用\" : \"禁用\")}", LogHelper.LogType.Event);
+            }
+            catch (Exception ex)
+            {
+                LogHelper.WriteLogToFile($"切换多指触控模式时出错: {ex.Message}", LogHelper.LogType.Error);
+            }
+        }
+
+        /// <summary>
         /// PPT放映模式显示手势按钮开关切换事件处理
         /// </summary>
         private void ToggleSwitchShowGestureButtonInSlideShow_Toggled(object sender, RoutedEventArgs e)
@@ -3319,6 +3353,133 @@ namespace Ink_Canvas
             }
         }
 
+
+        #endregion
+
+        #region MultiTouch Functions
+
+        /// <summary>
+        /// 多指触控开始事件处理
+        /// </summary>
+        private void OnMultiTouchStarted(object sender, MultiTouchEventArgs e)
+        {
+            try
+            {
+                if (!_multiTouchManager.IsMultiTouchEnabled) return;
+
+                LogHelper.WriteLogToFile($"多指触控开始，当前触控点数量: {e.ActiveTouches.Count}", LogHelper.LogType.Event);
+
+                // 根据需要处理多指触控行为
+                // 例如：缩放、旋转、移动等手势识别
+            }
+            catch (Exception ex)
+            {
+                LogHelper.WriteLogToFile($"处理多指触控开始事件时出错: {ex.Message}", LogHelper.LogType.Error);
+            }
+        }
+
+        /// <summary>
+        /// 多指触控变化事件处理
+        /// </summary>
+        private void OnMultiTouchDelta(object sender, MultiTouchEventArgs e)
+        {
+            try
+            {
+                if (!_multiTouchManager.IsMultiTouchEnabled) return;
+
+                // 计算触控距离变化，用于缩放
+                double currentDistance = e.CalculateDistanceBetweenFirstTwoTouches();
+
+                // 计算中心点移动，用于平移
+                Point centerPoint = e.CalculateCenterOfTouchPoints();
+
+                // 根据需要处理多指触控行为
+                // 例如：根据距离变化实现缩放，根据中心点移动实现平移
+                HandleMultiTouchGestures(e);
+            }
+            catch (Exception ex)
+            {
+                LogHelper.WriteLogToFile($"处理多指触控变化事件时出错: {ex.Message}", LogHelper.LogType.Error);
+            }
+        }
+
+        /// <summary>
+        /// 多指触控手势检测事件处理
+        /// </summary>
+        private void OnMultiTouchGestureDetected(object sender, MultiTouchGestureEventArgs e)
+        {
+            try
+            {
+                if (!_multiTouchManager.IsMultiTouchEnabled) return;
+
+                switch (e.GestureType)
+                {
+                    case MultiTouchGestureType.ZoomIn:
+                        LogHelper.WriteLogToFile($"检测到放大手势，缩放比例: {e.ScaleChange:F2}", LogHelper.LogType.Event);
+                        HandleZoomGesture(e.ScaleChange, e.CenterPoint);
+                        break;
+                    case MultiTouchGestureType.ZoomOut:
+                        LogHelper.WriteLogToFile($"检测到缩小手势，缩放比例: {e.ScaleChange:F2}", LogHelper.LogType.Event);
+                        HandleZoomGesture(e.ScaleChange, e.CenterPoint);
+                        break;
+                    case MultiTouchGestureType.Pan:
+                        LogHelper.WriteLogToFile($"检测到平移手势，位移: ({e.Translation.X:F2}, {e.Translation.Y:F2})", LogHelper.LogType.Event);
+                        HandlePanGesture(e.Translation);
+                        break;
+                    default:
+                        LogHelper.WriteLogToFile($"检测到未知手势类型: {e.GestureType}", LogHelper.LogType.Event);
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                LogHelper.WriteLogToFile($"处理多指触控手势事件时出错: {ex.Message}", LogHelper.LogType.Error);
+            }
+        }
+
+        /// <summary>
+        /// 多指触控完成事件处理
+        /// </summary>
+        private void OnMultiTouchCompleted(object sender, MultiTouchEventArgs e)
+        {
+            try
+            {
+                if (!_multiTouchManager.IsMultiTouchEnabled) return;
+
+                LogHelper.WriteLogToFile($"多指触控结束，剩余触控点数量: {e.ActiveTouches.Count}", LogHelper.LogType.Event);
+            }
+            catch (Exception ex)
+            {
+                LogHelper.WriteLogToFile($"处理多指触控完成事件时出错: {ex.Message}", LogHelper.LogType.Error);
+            }
+        }
+
+        /// <summary>
+        /// 处理缩放手势
+        /// </summary>
+        private void HandleZoomGesture(double scaleChange, Point centerPoint)
+        {
+            // 实现缩放功能，可以根据需要调整画布大小或缩放内容
+            // 这里只是一个示例，具体实现取决于应用需求
+        }
+
+        /// <summary>
+        /// 处理平移手势
+        /// </summary>
+        private void HandlePanGesture(Vector translation)
+        {
+            // 实现平移功能，可以根据需要移动画布内容
+            // 这里只是一个示例，具体实现取决于应用需求
+        }
+
+        /// <summary>
+        /// 处理多指触控手势
+        /// </summary>
+        private void HandleMultiTouchGestures(MultiTouchEventArgs e)
+        {
+            // 实现具体的手势处理逻辑
+            // 例如：双指缩放、双指平移、旋转等
+        }
 
         #endregion
     }
