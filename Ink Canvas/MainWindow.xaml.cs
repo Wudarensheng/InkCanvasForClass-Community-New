@@ -3239,6 +3239,7 @@ namespace Ink_Canvas
                 LogHelper.WriteLogToFile($"更新UIA置顶开关可见性时出错: {ex.Message}", LogHelper.LogType.Error);
             }
         }
+        #endregion
 
         /// <summary>
         /// 应用UIA置顶功能
@@ -3326,7 +3327,6 @@ namespace Ink_Canvas
         }
 
 
-        }
 
 
         #region 多人协作功能
