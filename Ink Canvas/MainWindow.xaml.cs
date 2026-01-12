@@ -62,6 +62,9 @@ namespace Ink_Canvas
         // 悬浮窗拦截管理器
         private FloatingWindowInterceptorManager _floatingWindowInterceptorManager;
 
+        // 多人协作管理器
+        private CollaborationManager _collaborationManager;
+
 
         // 设置面板相关状态
         private bool userChangedNoFocusModeInSettings;
@@ -719,6 +722,9 @@ namespace Ink_Canvas
                     };
                 }
             }), DispatcherPriority.Loaded);
+
+            // 初始化多人协作功能
+            InitializeCollaborationFeature();
         }
 
         private void SystemEventsOnDisplaySettingsChanged(object sender, EventArgs e)
@@ -3319,6 +3325,359 @@ namespace Ink_Canvas
             }
         }
 
+
+        }
+
+
+        #region 多人协作功能
+
+        /// <summary>
+        /// 初始化多人协作功能
+        /// </summary>
+        private void InitializeCollaborationFeature()
+        {
+            try
+            {
+                _collaborationManager = new CollaborationManager();
+                
+                // 注册协作事件
+                _collaborationManager.OnRemoteStrokeAdded += OnRemoteStrokeAdded;
+                _collaborationManager.OnRemoteStrokeDeleted += OnRemoteStrokeDeleted;
+                _collaborationManager.OnRemoteCursorMoved += OnRemoteCursorMoved;
+                _collaborationManager.OnUserJoined += OnUserJoined;
+                _collaborationManager.OnUserLeft += OnUserLeft;
+                _collaborationManager.OnConnectionStatusChanged += OnConnectionStatusChanged;
+
+                LogHelper.WriteLogToFile("多人协作功能初始化完成", LogHelper.LogType.Event);
+            }
+            catch (Exception ex)
+            {
+                LogHelper.WriteLogToFile($"初始化多人协作功能失败: {ex.Message}", LogHelper.LogType.Error);
+            }
+        }
+
+        /// <summary>
+        /// 连接到协作会话
+        /// </summary>
+        public async Task<bool> ConnectToCollaborationSession(string serverUrl, string sessionId = null)
+        {
+            if (_collaborationManager == null)
+            {
+                InitializeCollaborationFeature();
+            }
+
+            return await _collaborationManager.ConnectToServer(serverUrl, sessionId);
+        }
+
+        /// <summary>
+        /// 断开协作会话
+        /// </summary>
+        public async Task DisconnectFromCollaborationSession()
+        {
+            if (_collaborationManager != null)
+            {
+                await _collaborationManager.DisconnectAsync();
+            }
+        }
+
+        /// <summary>
+        /// 当接收到远程笔迹时的处理
+        /// </summary>
+        private void OnRemoteStrokeAdded(Stroke stroke)
+        {
+            try
+            {
+                // 在UI线程上添加笔迹
+                Dispatcher.Invoke(() =>
+                {
+                    inkCanvas.Strokes.Add(stroke);
+                });
+            }
+            catch (Exception ex)
+            {
+                LogHelper.WriteLogToFile($"添加远程笔迹失败: {ex.Message}", LogHelper.LogType.Error);
+            }
+        }
+
+        /// <summary>
+        /// 当接收到远程笔迹删除时的处理
+        /// </summary>
+        private void OnRemoteStrokeDeleted(Guid strokeId)
+        {
+            try
+            {
+                // 在UI线程上删除笔迹
+                Dispatcher.Invoke(() =>
+                {
+                    // 找到对应的笔迹并删除
+                    var strokeToRemove = inkCanvas.Strokes.FirstOrDefault(s => 
+                        s.GetHashCode().ToString() == strokeId.ToString());
+                    
+                    if (strokeToRemove != null)
+                    {
+                        inkCanvas.Strokes.Remove(strokeToRemove);
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                LogHelper.WriteLogToFile($"删除远程笔迹失败: {ex.Message}", LogHelper.LogType.Error);
+            }
+        }
+
+        /// <summary>
+        /// 当接收到远程光标移动时的处理
+        /// </summary>
+        private void OnRemoteCursorMoved(Point position, string userName)
+        {
+            try
+            {
+                // 可以在这里显示远程用户的光标位置
+                // 目前暂时只记录日志
+                LogHelper.WriteLogToFile($"用户 {userName} 的光标移动到 ({position.X}, {position.Y})", LogHelper.LogType.Trace);
+            }
+            catch (Exception ex)
+            {
+                LogHelper.WriteLogToFile($"处理远程光标移动失败: {ex.Message}", LogHelper.LogType.Error);
+            }
+        }
+
+        /// <summary>
+        /// 当有用户加入时的处理
+        /// </summary>
+        private void OnUserJoined(string userId, string userName)
+        {
+            try
+            {
+                LogHelper.WriteLogToFile($"用户 {userName} ({userId}) 加入了协作会话", LogHelper.LogType.Event);
+                
+                // 可以在这里更新UI显示在线用户列表
+            }
+            catch (Exception ex)
+            {
+                LogHelper.WriteLogToFile($"处理用户加入事件失败: {ex.Message}", LogHelper.LogType.Error);
+            }
+        }
+
+        /// <summary>
+        /// 当有用户离开时的处理
+        /// </summary>
+        private void OnUserLeft(string userId)
+        {
+            try
+            {
+                LogHelper.WriteLogToFile($"用户 {userId} 离开了协作会话", LogHelper.LogType.Event);
+                
+                // 可以在这里更新UI显示在线用户列表
+            }
+            catch (Exception ex)
+            {
+                LogHelper.WriteLogToFile($"处理用户离开事件失败: {ex.Message}", LogHelper.LogType.Error);
+            }
+        }
+
+        /// <summary>
+        /// 当连接状态改变时的处理
+        /// </summary>
+        private void OnConnectionStatusChanged(string status)
+        {
+            try
+            {
+                LogHelper.WriteLogToFile($"协作连接状态: {status}", LogHelper.LogType.Event);
+                
+                // 可以在这里更新UI显示连接状态
+            }
+            catch (Exception ex)
+            {
+                LogHelper.WriteLogToFile($"处理连接状态改变事件失败: {ex.Message}", LogHelper.LogType.Error);
+            }
+        }
+
+        /// <summary>
+        /// 同步本地笔迹到远程用户
+        /// </summary>
+        private async void SyncLocalStrokeToRemote(Stroke stroke)
+        {
+            if (_collaborationManager?.IsConnected == true)
+            {
+                await _collaborationManager.AddStrokeAsync(stroke);
+            }
+        }
+
+        /// <summary>
+        /// 同步本地笔迹删除到远程用户
+        /// </summary>
+        private async void SyncLocalStrokeRemovalToRemote(Guid strokeId)
+        {
+            if (_collaborationManager?.IsConnected == true)
+            {
+                await _collaborationManager.RemoveStrokeAsync(strokeId);
+            }
+        }
+
+        #endregion
+
+
+        #region 多指触控功能
+
+        // 添加多指触控相关字段
+        private bool _isMultiTouchEnabled = true; // 启用多指触控
+        private Dictionary<int, Point> _touchPoints = new Dictionary<int, Point>(); // 触摸点集合
+        private int _activeTouchCount = 0; // 当前活跃的触摸点数量
+
+        /// <summary>
+        /// 处理多指触控开始事件
+        /// </summary>
+        private void HandleMultiTouchStarted(TouchEventArgs e)
+        {
+            if (!_isMultiTouchEnabled) return;
+
+            var touchPoint = e.GetTouchPoint(inkCanvas);
+            var touchId = e.TouchDevice.Id;
+
+            if (!_touchPoints.ContainsKey(touchId))
+            {
+                _touchPoints[touchId] = touchPoint.Position;
+                _activeTouchCount++;
+
+                // 当有两个或更多手指触摸时，启用多点手势模式
+                if (_activeTouchCount >= 2)
+                {
+                    EnableMultiTouchGestureMode();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 处理多指触控移动事件
+        /// </summary>
+        private void HandleMultiTouchMoved(TouchEventArgs e)
+        {
+            if (!_isMultiTouchEnabled) return;
+
+            var touchPoint = e.GetTouchPoint(inkCanvas);
+            var touchId = e.TouchDevice.Id;
+
+            if (_touchPoints.ContainsKey(touchId))
+            {
+                var oldPoint = _touchPoints[touchId];
+                _touchPoints[touchId] = touchPoint.Position;
+
+                // 检查是否有多点触控活动
+                if (_activeTouchCount >= 2)
+                {
+                    ProcessMultiTouchGestures();
+                }
+                else
+                {
+                    // 单点触控，正常处理
+                    HandleSingleTouchMoved(e, oldPoint, touchPoint.Position);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 处理多指触控结束事件
+        /// </summary>
+        private void HandleMultiTouchEnded(TouchEventArgs e)
+        {
+            if (!_isMultiTouchEnabled) return;
+
+            var touchId = e.TouchDevice.Id;
+
+            if (_touchPoints.ContainsKey(touchId))
+            {
+                _touchPoints.Remove(touchId);
+                _activeTouchCount = Math.Max(0, _activeTouchCount - 1);
+
+                // 如果没有多点触控活动了，退出手势模式
+                if (_activeTouchCount < 2)
+                {
+                    DisableMultiTouchGestureMode();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 启用多点手势模式
+        /// </summary>
+        private void EnableMultiTouchGestureMode()
+        {
+            // 保存当前编辑模式
+            var currentMode = inkCanvas.EditingMode;
+            
+            // 切换到无编辑模式以允许手势操作
+            inkCanvas.EditingMode = InkCanvasEditingMode.None;
+            
+            LogHelper.WriteLogToFile("启用多点触控手势模式", LogHelper.LogType.Trace);
+        }
+
+        /// <summary>
+        /// 禁用多点手势模式
+        /// </summary>
+        private void DisableMultiTouchGestureMode()
+        {
+            // 恢复之前的编辑模式
+            if (inkCanvas.EditingMode == InkCanvasEditingMode.None)
+            {
+                inkCanvas.EditingMode = InkCanvasEditingMode.Ink;
+            }
+            
+            LogHelper.WriteLogToFile("禁用多点触控手势模式", LogHelper.LogType.Trace);
+        }
+
+        /// <summary>
+        /// 处理单点触控移动
+        /// </summary>
+        private void HandleSingleTouchMoved(TouchEventArgs e, Point oldPoint, Point newPoint)
+        {
+            // 这里可以处理单点触控的拖拽移动等操作
+            // 目前保持原有逻辑
+        }
+
+        /// <summary>
+        /// 处理多点触控手势
+        /// </summary>
+        private void ProcessMultiTouchGestures()
+        {
+            if (_touchPoints.Count < 2) return;
+
+            var touchIds = _touchPoints.Keys.ToArray();
+            if (touchIds.Length >= 2)
+            {
+                var point1 = _touchPoints[touchIds[0]];
+                var point2 = _touchPoints[touchIds[1]];
+
+                // 计算距离变化（用于缩放检测）
+                var currentDistance = CalculateDistance(point1, point2);
+
+                // 如果有更多触摸点，可以计算更复杂的几何关系
+                if (_touchPoints.Count > 2)
+                {
+                    // 处理三指及以上手势
+                    ProcessThreePointGesture();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 计算两点间距离
+        /// </summary>
+        private double CalculateDistance(Point p1, Point p2)
+        {
+            var dx = p1.X - p2.X;
+            var dy = p1.Y - p2.Y;
+            return Math.Sqrt(dx * dx + dy * dy);
+        }
+
+        /// <summary>
+        /// 处理三点手势
+        /// </summary>
+        private void ProcessThreePointGesture()
+        {
+            // 三点手势可以用于特殊功能，比如清屏
+            // 目前留空，可根据需要实现
+        }
 
         #endregion
     }
