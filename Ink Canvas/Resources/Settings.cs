@@ -463,13 +463,13 @@ namespace Ink_Canvas
         public int MinimumAutomationStrokeNumber { get; set; }
 
         [JsonProperty("autoSavedStrokesLocation")]
-        public string AutoSavedStrokesLocation = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Saves");
+        public string AutoSavedStrokesLocation { get; set; } = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Saves");
 
         [JsonProperty("autoDelSavedFiles")]
         public bool AutoDelSavedFiles;
 
         [JsonProperty("autoDelSavedFilesDaysThreshold")]
-        public int AutoDelSavedFilesDaysThreshold = 15;
+        public int AutoDelSavedFilesDaysThreshold { get; set; } = 15;
 
         [JsonProperty("keepFoldAfterSoftwareExit")]
         public bool KeepFoldAfterSoftwareExit { get; set; } = false;
