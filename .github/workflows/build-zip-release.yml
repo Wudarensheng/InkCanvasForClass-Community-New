@@ -66,69 +66,12 @@ jobs:
           Add-Content -Path $env:GITHUB_ENV -Value "RELEASE_TAG=$tag"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "release_tag=$tag"
 
-      - name: Check if release already exists
-        id: check_release
-        shell: pwsh
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          $ownerRepo = '${{ github.repository }}'
-          $tag = '${{ steps.set_release_tag.outputs.release_tag }}'
-          $headers = @{ Authorization = "token $env:GITHUB_TOKEN"; Accept = "application/vnd.github+json" }
-          $api = "https://api.github.com/repos/$ownerRepo/releases/tags/$tag"
-          try {
-            $resp = Invoke-RestMethod -Headers $headers -Uri $api -Method Get
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "release_exists=true"
-            Add-Content -Path $env:GITHUB_OUTPUT -Value ("release_upload_url=$($resp.upload_url)")
-          } catch {
-            Add-Content -Path $env:GITHUB_OUTPUT -Value "release_exists=false"
-          }
-
-      - name: Create Release (may already exist)
-        id: create_release
-        uses: actions/create-release@v1
-        if: ${{ steps.check_release.outputs.release_exists != 'true' }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create Release and Upload Asset
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
         with:
+          files: artifact/InkCanvasForClass.zip
+          name: Release ${{ steps.set_release_tag.outputs.release_tag }}
           tag_name: ${{ steps.set_release_tag.outputs.release_tag }}
-          release_name: ${{ steps.set_release_tag.outputs.release_tag }}
           draft: false
           prerelease: false
-
-
-      - name: Resolve release upload_url
-        id: get_release_upload_url
-        shell: pwsh
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          $uploadUrl = '${{ steps.create_release.outputs.upload_url }}'
-          if (-not $uploadUrl -and '${{ steps.check_release.outputs.release_upload_url }}') {
-            $uploadUrl = '${{ steps.check_release.outputs.release_upload_url }}'
-          }
-          if (-not $uploadUrl) {
-            $ownerRepo = '${{ github.repository }}'
-            $tag = '${{ steps.set_release_tag.outputs.release_tag }}'
-            $headers = @{ Authorization = "token $env:GITHUB_TOKEN"; Accept = "application/vnd.github+json" }
-            $api = "https://api.github.com/repos/$ownerRepo/releases/tags/$tag"
-            try {
-              $resp = Invoke-RestMethod -Headers $headers -Uri $api -Method Get
-              $uploadUrl = $resp.upload_url
-            } catch {
-              Write-Host "Failed to get release by tag: $_"
-              exit 1
-            }
-          }
-            # Keep the upload_url template (e.g. {...}?name,label) so upload action can append the asset name
-          Add-Content -Path $env:GITHUB_OUTPUT -Value ("upload_url=$uploadUrl")
-
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.get_release_upload_url.outputs.upload_url }}
-          asset_path: artifact/InkCanvasForClass.zip
-          asset_name: InkCanvasForClass.zip
-          asset_content_type: application/zip
