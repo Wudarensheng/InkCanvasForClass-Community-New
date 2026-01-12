@@ -1,5 +1,18 @@
-The provided file change list appears to contain invalid or corrupted file paths (containing quote characters and incomplete strings like '"Ink'). This suggests there may be an issue with how the git status was captured or parsed.
+```
+# Logs and temp files
+*.log
+*.tmp
+*.swp
 
-Given that the file paths are not recognizable as valid files that would typically need to be ignored, and without clear evidence of build artifacts, dependency directories, or temporary files, no modifications to the .gitignore are warranted.
+# Environment
+.env
+.env.local
+*.env.*
 
-If you can provide a clean list of actual file changes, I can generate an appropriate .gitignore file. For now, the existing .gitignore remains unchanged.
+# Editors
+.vscode/
+.idea/
+
+# Original rules preserved
+*.log
+```
