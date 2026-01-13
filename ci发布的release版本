@@ -1,0 +1,4 @@
+Release Log:
+- Commit 609e044: Fix compilation errors and deprecation warnings
+- Commit a04f053: Fix malformed .gitignore path and invalid file reference
+- Commit 8979fee: Merge pull request #4
