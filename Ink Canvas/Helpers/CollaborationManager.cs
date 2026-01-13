@@ -310,9 +310,22 @@ namespace Ink_Canvas.Helpers
                 var stylusPoints = strokeData.StylusPoints.Select(sp => 
                     new StylusPoint(sp.X, sp.Y, sp.PressureFactor)).ToList();
 
+                var color = System.Windows.Media.Colors.Black; // 默认颜色
+                if (!string.IsNullOrEmpty(strokeData.DrawingAttributes.Color))
+                {
+                    try
+                    {
+                        color = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(strokeData.DrawingAttributes.Color);
+                    }
+                    catch
+                    {
+                        // 如果颜色转换失败，保持默认颜色
+                    }
+                }
+
                 var drawingAttributes = new DrawingAttributes
                 {
-                    Color = System.Windows.Media.ColorConverter.ConvertFromString(strokeData.DrawingAttributes.Color) as System.Windows.Media.Color?,
+                    Color = color,
                     Width = strokeData.DrawingAttributes.Width,
                     Height = strokeData.DrawingAttributes.Height,
                     IsHighlighter = strokeData.DrawingAttributes.IsHighlighter,
